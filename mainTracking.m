@@ -215,17 +215,3 @@ end
 %save all Data in the master folder
 filename = [outDir filesep 'allLoc'];
 save(filename,'allData');
-
-%% Calculate correlation
-% 
-% %xcorr??
-% euclDistX = sqrt((data2Store(:,1,1)- data2Store(:,1,2)).^2);
-% avgMotX1 = data2Store(:,1,1) - mean(data2Store(:,1,1));
-% avgMotX2 = data2Store(:,1,2) - mean(data2Store(:,1,2));
-% avgMotX3 = data2Store(:,1,3) - mean(data2Store(:,1,3));
-% avgMotX4 = data2Store(:,1,4) - mean(data2Store(:,1,4));
-% 
-% 
-% %RXY = corrcoef(x,y);
-% 
-% %process MP4;

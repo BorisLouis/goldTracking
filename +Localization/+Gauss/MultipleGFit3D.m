@@ -1,5 +1,5 @@
   %Fitting
-function [gpar,resnorm,res] = MultipleGFit3D(A,X0,Y0,Z0,domain,NbG,width)
+function [gpar,resnorm,res,fit] = MultipleGFit3D(A,X0,Y0,Z0,domain,NbG,width)
 maxNFit = 5;
 if NbG > maxNFit
     error('too many PSF are asked, maximum is 8 for fitting')
@@ -13,8 +13,8 @@ end
 if width.xy >0
     
     wguessXY = width.xy;
-    lwXY = width.xy-width.xy/2;
-    uwXY = width.xy+width.xy/2;
+    lwXY = width.xy-width.xy/4;
+    uwXY = width.xy+width.xy/4;
 else
     wguessXY = 3;
     lwXY = 1;
@@ -24,8 +24,8 @@ end
 
 if width.z >0
     wguessZ = width.z;
-    lwZ = width.z-width.z/2;
-    uwZ = width.z+width.z/2;
+    lwZ = width.z-width.z/4;
+    uwZ = width.z+width.z/4;
     
 else
     
@@ -64,11 +64,11 @@ lb        = [0.5*(max(A(:))-min(A(:)))              lwXY      lwZ         bkglb.
        minDomX        minDomY     minDomZ-0.1*maxAbsDomZ]; 
 % UPPER BOUND FOR FITTING PARAMETER
 ub        = [1.2*(max(A(:)))  uwXY      uwZ        bkgub ...
-    maxDomX        minDomY     maxDomZ+0.1*maxAbsDomZ...
-    maxDomX        minDomY     maxDomZ+0.1*maxAbsDomZ...
-    maxDomX        minDomY     maxDomZ+0.1*maxAbsDomZ...
-    maxDomX        minDomY     maxDomZ+0.1*maxAbsDomZ...
-    maxDomX        minDomY     maxDomZ+0.1*maxAbsDomZ];
+    maxDomX        maxDomY     maxDomZ+0.1*maxAbsDomZ...
+    maxDomX        maxDomY     maxDomZ+0.1*maxAbsDomZ...
+    maxDomX        maxDomY     maxDomZ+0.1*maxAbsDomZ...
+    maxDomX        maxDomY     maxDomZ+0.1*maxAbsDomZ...
+    maxDomX        maxDomY     maxDomZ+0.1*maxAbsDomZ];
 
 lb = lb(1,1:4+(NbG)*3);
 ub = ub(1,1:4+(NbG)*3);
@@ -91,25 +91,27 @@ switch NbG
         [gpar,resnorm,res] = lsqcurvefit(@Gauss3D,...
             initguess,domain,A,lb,ub,curvefitoptions);
         
+        fit = Gauss3D(gpar,domain);
     case 2
      
         [gpar,resnorm,res] = lsqcurvefit(@Gauss3D2,initguess,...
             domain,A,lb,ub,curvefitoptions);
-        
+        fit = Gauss3D2(gpar,domain);
     case 3
     
        [gpar,resnorm,res] = lsqcurvefit(@Gauss3D3,initguess,...
            domain,A,lb,ub,curvefitoptions);
-        
+        fit = Gauss3D3(gpar,domain);
     case 4
    
         [gpar,resnorm,res] = lsqcurvefit(@Gauss3D4,initguess,...
             domain,A,lb,ub,curvefitoptions);
-        
+        fit = Gauss3D4(gpar,domain);
     case 5
      
         [gpar,resnorm,res] = lsqcurvefit(@Gauss3D5,initguess,...
             domain,A,lb,ub,curvefitoptions);
+        fit = Gauss3D5(gpar,domain);
         
 %     case 6
 %                 
