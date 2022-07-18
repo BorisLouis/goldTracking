@@ -3,8 +3,8 @@ clc
 close all
 %% User input
 delta = 50;% in px Size of the ROI around particles detected(radius 50 = 100x100 pixel
-nParticles = 2;%number of particles expected in the movie has to be exact
-width = 5; %for fitting (3 for 200nm beads, 400 nm beads to be determined, 0 to let the code find the width)
+nParticles = 1;%number of particles expected in the movie has to be exact
+width = 5; %for fitting, input 0 to let the code find the width if unknown)
 
 pxSize = 95;%in nm
 minDist = 6; %in pixels (min distant expected between particles
