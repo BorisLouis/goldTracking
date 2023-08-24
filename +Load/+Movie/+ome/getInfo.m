@@ -1,6 +1,12 @@
-function [ frameCell, movieInfo, tfl ] = getInfo( path2file )
+function [ frameCell, movieInfo, tfl ] = getInfo( path2file,checkRes )
 %GETINFO receives as input the path to the file and gives back all
 %infromation about the frames, the movie and total number of frames
+switch nargin
+    case 1
+        doCheckRes = true;
+    case 2
+        doCheckRes = checkRes;
+end
 %   Detailed explanation goes here
 warning('off','all')
 tObj = Tiff(path2file,'r');
@@ -52,18 +58,25 @@ for imIdx = 1:nImFiles
     frameCell{imIdx} = frameInfo;
 end
 % check frameInfo
-[checkRes] = checkFrameInfo(frameInfo);
+if doCheckRes
+    [checkRes] = checkFrameInfo(frameInfo);
+else
+    checkRes = 'Yes';
+end
 %checkRes ='Yes';
 switch checkRes
     case 'Yes'
     case 'Fix'
-        try
-            [frameInfo] = fixCamTiming(frameInfo);
-        catch
-            warning('on')
-            warning('Something went wrong when trying to fix camera sync, no fix was apply');
-            warning('off');
-        end
+        %try
+        [frameInfo] = fixCamTiming(frameInfo); 
+        warning('on')
+        warning('Found some synchronization issue and fixed them');
+        warning('off')
+%         catch
+%             warning('on')
+%             warning('Something went wrong when trying to fix camera sync, no fix was apply');
+%             warning('off');
+%         end
       %  error('Fixing synchronization is not ready yet, sorry for the inconvenience');
     case 'No'
         disp('If you are running folder analysis, please remove the file from the folder');
@@ -208,7 +221,7 @@ end
 
 function [checkRes] = checkFrameInfo(frameInfo)
     disp('checking Camera synchronization');
-    frame2Comp = 20;
+    frame2Comp = 10;
     if length(frameInfo) < frame2Comp
        
         frame2Comp = size(frameInfo,1);
@@ -218,11 +231,9 @@ function [checkRes] = checkFrameInfo(frameInfo)
     matC = cellfun(@str2num,cellC);
     %We check the first 20 frames as they should be perfectly synchronized
     %if camera sync was properly used.
-    testData = matC(1:frame2Comp);
+    test = abs(diff(matC(1:frame2Comp)));
     
-    test = (sum(testData(1:2:end))+sum(testData(2:2:end))) == frame2Comp/2;
-
-    if test
+    if all(test)
         checkRes = 'Yes';
     else
         checkRes = 'Fix';
@@ -258,21 +269,59 @@ function [frameInfo] = fixCamTiming(frameInfo)
         modifier = 1;
    end
 
-    currT = '0';
-    for i = 1: length(tmpInfo)
+    idxRefCam = find(strcmp({tmpInfo.C},num2str(refCam))==1);
+    for i = 1: length(idxRefCam)
+        currRefId = idxRefCam(i);
+        currT = tmpInfo(currRefId).T;
+        %get the time of the ref camera for the current frame
+        timeCurrRef = tmpInfo(currRefId).time;
+
+        %find another frame with similar timing
+        id = find((abs([tmpInfo.time]-timeCurrRef))<4);
+        assert(length(id) == 2, 'couldnt find 2 frames for that time point');
+
+        id = id(id~= currRefId);
+        tmpInfo(id).T = currT;
         
-        %if current index is not reference camera we need to fix things
-        if camera(i) ~=refCam
-        
-            % prev: abs(newTiming(i)-newTiming)<mean(test)
-            tmpInfo(i).T = currT;
-        else
-            cT = str2double(tmpInfo(i).T) + modifier;
-            currT = num2str(cT);
-            
-        end
+        %previous version:
+%         %if current index is not reference camera we need to fix things
+%         if camera(i) ~=refCam
+%         
+%             % prev: abs(newTiming(i)-newTiming)<mean(test)
+%             tmpInfo(i).T = currT;
+%             
+%         else
+%             %if it is the ref camera then currT becomes the camera
+%             currT = tmpInfo(i).T;
+%             
+%         end
         
     end
+    
+    % test that the camera are indeed synchroneous
+    maxT = str2double(tmpInfo(end).T);
+    for i = 0:maxT
+        
+        idx = strcmp({tmpInfo.T},{num2str(i)});
+        
+        camDiff = {tmpInfo(idx).C};
+        
+        %test cam diff
+        %#1 we test that there is only 2 camera frames
+        assert(length(camDiff)<=2,'More than two camera for a single frame')
+        %#2 
+        assert(~strcmp(camDiff{1}, camDiff{2}),'The two cameras corresponding to the same time point are not different')
+        
+        %test timing difference
+        camTiming = {tmpInfo(idx).time};
+        
+        assert(abs(camTiming{1} - camTiming{2}) < 4, 'Camera delay bigger than 4ms after fixing, something is wrong')
+        
+        
+    end
+    
+    
+    
     
     frameInfo = tmpInfo;
     warning('There was some issues with the synchronization, we had to fixed the out of sync frames');

@@ -209,7 +209,7 @@ for i = 1:length(fields)
 
 end
 
-%% convert Data to table
+
 figure
 hold on
 for i = 1: size(data2Store,3)
@@ -218,6 +218,10 @@ for i = 1: size(data2Store,3)
 end
 axis image
 view(3)
+
+%% convert Data to table
+
+trackRes = save.convertDataToTrackRes(allData,nParticles);
 for i =1: size(allData,2)
     traces = cell(nParticles,1);
     

@@ -37,6 +37,7 @@ classdef Movie < handle
                     error('Unexpected number of argument');
                     
             end
+            raw.checkSync = info.checkSync;
            
             obj.raw  = raw;
             if ~isfield(info,'frame2Load')
@@ -286,24 +287,27 @@ classdef Movie < handle
         end
         
         function cropIm(obj)
-            data = obj.getFrame(1);
-            
-            figure
-            imagesc(data.Cam1);
-            colormap('gray');
-            axis image
-            
-            disp('Please draw a rectangle on the image to crop it');
-            
-            h2 = imrect(gca);
-            Pos = wait(h2);%store positions of the rectangle
-            delete(h2);%remove the rectangle from the image
-            
-           % if Pos(3) ~= Pos(4)
-            %    Pos(3:4) = min(Pos(3:4));
-            %end
-            close(gcf)
-            obj.info.ROI = Pos;
+            if and(obj.info.useSameROI,isfield(obj.info,'ROI'))
+            else
+                data = obj.getFrame(1);
+
+                figure
+                imagesc(data.Cam1);
+                colormap('gray');
+                axis image
+
+                disp('Please draw a rectangle on the image to crop it');
+
+                h2 = imrect(gca);
+                Pos = wait(h2);%store positions of the rectangle
+                delete(h2);%remove the rectangle from the image
+
+               % if Pos(3) ~= Pos(4)
+                %    Pos(3:4) = min(Pos(3:4));
+                %end
+                close(gcf)
+                obj.info.ROI = Pos;
+            end
         end
         
         function saveMovie(obj,ext,frameRate,scaleBar,IScale)
@@ -472,7 +476,7 @@ classdef Movie < handle
                 
                 case '.ome.tif'
                     
-                    [frameInfo, movInfo, ~ ] = Load.Movie.ome.getInfo(fullPath);
+                    [frameInfo, movInfo, ~ ] = Load.Movie.ome.getInfo(fullPath,rawInfo.checkSync);
 
                     if iscell(frameInfo)
                         disp('Those tiff are multi-Images, we combine the info...')

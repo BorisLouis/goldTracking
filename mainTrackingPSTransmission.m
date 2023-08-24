@@ -1,9 +1,10 @@
+
 clear 
 clc
 close all
 %% User input
-delta = 40;% in px Size of the ROI around particles detected(radius 50 = 100x100 pixel
-nParticles = 2;%number of particles expected in the movie has to be exact
+delta = 30;% in px Size of the ROI around particles detected(radius 50 = 100x100 pixel
+nParticles = 1;%number of particles expected in the movie has to be exact
 width = 0; %for fitting, input 0 to let the code find the width if unknown)
 
 pxSize = 95;%in nm
@@ -11,13 +12,10 @@ minDist = 5; %in pixels (min distant expected between particles)
 scaleBar = 1; %in um
 tail = 20;%Length of the tail in frames, for plotting the traces on top of the movie
 frameRate = 50; %for saving the movie
-makeMovie = false; % true or false, to make a movie with the image and localization
-info.type = 'normal';%Transmission or normal 
+info.type = 'Transmission';%Transmission or normal 
 info.checkSync = false; %true if want to check for camera synchronization
-info.useSameROI = true;
-info.runMethod = 'load';% 'run'
-toAnalyze = 'folder';%accepted: .mp4, .ome.tif, folder. (folder that contain folders of .ome.tif.
-outputFolder = 'Results'; %name of the folder to output the results
+toAnalyze = '.ome.tif';%accepted: .mp4, .ome.tif, folder. (folder that contain folders of .ome.tif.
+outputFolder = 'Results';%name of the folder to output the results
 %% Loading
 switch toAnalyze %switch depending on what user want to analyze
     case '.mp4'
@@ -61,7 +59,6 @@ for i =1: size(folder2Mov,2)
     switch toAnalyze
         case '.mp4'
             p2file = [folder2Mov(i).folder filesep folder2Mov(i).name];
-            currentPath = folder2Mov(i).folder;
             v = VideoReader(p2file);%Create VideoReader object
             nFrames = floor(v.Duration*v.FrameRate);%extract the number of frames
             fullStackIn = zeros(v.Height,v.Width,nFrames);%preallocate memory
@@ -71,22 +68,15 @@ for i =1: size(folder2Mov,2)
                 fullStackIn(:,:,j) = rgb2gray(frame);%extract the intensity data from frames
             end
         otherwise
-            if and(i~=1,info.useSameROI)
-               info.ROI = prevROI; 
-            end
-            currMov = Core.Movie(file,info);%Create Movie Object
-            fullStack = currMov.getFrame(1);%extract first frame
+            myMov = Core.Movie(file,info);%Create Movie Object
+            fullStack = myMov.getFrame(1);%extract first frame
             frame = fullStack.Cam1;
             %check if cropping is necessary
             if size(frame,2) > 400
-                    currMov.cropIm;
-                    prevROI = currMov.info.ROI;
-            else
-                prevROI = [1 ,1, currMov.raw.movInfo.Width,currMov.raw.movInfo.Length];
+                myMov.cropIm;
             end
             %load full stack
-            fullStack = currMov.getFrame;
-            currentPath = currMov.raw.movInfo.Path;
+            fullStack = myMov.getFrame;
             %revert the intensity scale
             if strcmpi(info.type,'transmission')
                 fullStackIn = imcomplement(fullStack.Cam1);
@@ -96,6 +86,36 @@ for i =1: size(folder2Mov,2)
     end
     
     frame = 5;
+    scNorm = double(fullStackIn(:,:,frame))-min(double(fullStackIn(:,:,frame)));
+    scNorm = scNorm./max(scNorm(:));
+    BW = imbinarize(scNorm);
+    
+    BW = imfill(BW,'holes');
+    
+    stat = regionprops(BW,'area','pixelidxlist');
+    
+    [~,idx] = max([stat.Area]);
+    
+    pxIdx = stat(idx).PixelIdxList;
+    
+    bwMask = zeros(size(fullStackIn));
+    
+    for j = 1:size(bwMask,3)
+       currentFrame = bwMask(:,:,j);
+       
+       currentFrame(pxIdx) = true;
+       
+       bwMask(:,:,j) = currentFrame;
+        
+    end
+    
+    fullStackIn(logical(bwMask)) = imcomplement(fullStackIn(logical(bwMask)));
+    fullStackIn(~logical(bwMask)) = min(fullStackIn(logical(bwMask)));
+    
+    figure(1)
+    imagesc(fullStackIn(:,:,1))
+   
+    
     %get the n maxima where n is the number of particles expected and
     %minDist is the distance expected between them
     [pos] = goldProj.nMaxDetection (fullStackIn(:,:,frame),nParticles,minDist);
@@ -148,11 +168,11 @@ for i =1: size(folder2Mov,2)
         g = g';
         unSortedData = [unSortedData; g zeros(size(g,1),1) ones(size(g,1),1)*j  ];
         
-%         figure(1)
-%         imagesc(currentFrame)
-%         hold on
-%         scatter(g(:,1),g(:,2));
-%         
+        figure(1)
+        imagesc(currentFrame)
+        hold on
+        scatter(g(:,1),g(:,2));
+        
         
         %Generate an image of the Fit to be able to plot in case we want to
         %check
@@ -192,11 +212,9 @@ for i =1: size(folder2Mov,2)
     %save data to the current folder being analyze
     filename = [file.path filesep 'LocalizationData.mat'];
     save(filename,'data2Store');
-    
     %store data in allData
-    allData(i).traces = data2Store;
-    allData(i).fileName = currentPath;
-    allData(i).path = path;
+    allData(i).locPos = data2Store;
+    allData(i).fileName = file.path;
     %clear waitbar
     close(h);
     
@@ -222,14 +240,10 @@ for i =1: size(folder2Mov,2)
     
 %% MovieMaker
 %save a movie where the traces is displayed on top of the image
-if makeMovie
-    filename = [file.path filesep 'TrackMovie.gif'];
-    goldProj.makeTraceMovie(data2Store,fullStackIn,filename,frameRate,scaleBar,tail);
-end
-end
-%% save all Data in the master folder
-trackRes = save.convertData2TrackRes(allData,nParticles);
+filename = [file.path filesep 'TrackMovie.gif'];
+goldProj.makeTraceMovie(data2Store,fullStackIn,filename,frameRate,scaleBar,tail);
 
-filename = [path filesep 'trackRes.mat'];
-save(filename,'trackRes');
-h = msgbox('Data succesfully saved');
+end
+%save all Data in the master folder
+filename = [outDir filesep 'allLoc'];
+save(filename,'allData');
