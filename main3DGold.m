@@ -209,7 +209,7 @@ for i = 1:length(fields)
 
 end
 
-
+%% plotting
 figure
 hold on
 for i = 1: size(data2Store,3)
@@ -220,25 +220,8 @@ axis image
 view(3)
 
 %% convert Data to table
+trackRes = save.convertData2TrackRes(allData,nParticles);
 
-trackRes = save.convertDataToTrackRes(allData,nParticles);
-for i =1: size(allData,2)
-    traces = cell(nParticles,1);
-    
-    for j = 1: nParticles
-        tabData = table(zeros(nFrames,1),zeros(nFrames,1),zeros(nFrames,1),...
-            zeros(nFrames,1),'VariableNames',{'row','col','z','t'});
-        
-        tabData.col = allData(i).traces(:,1,j);
-        tabData.row = allData(i).traces(:,2,j);
-        tabData.z = allData(i).traces(:,3,j);
-        tabData.t = (1:nFrames)';
-        
-        traces{j} = tabData;
-    end
-    allData(i).traces = traces;
-end
-trackRes = allData;
 filename = [file.path filesep 'trackRes.mat'];
 save(filename,'trackRes');
 h = msgbox('Data succesfully saved');
