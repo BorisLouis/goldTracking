@@ -2,16 +2,16 @@ clear
 clc
 close all
 %% User input
-delta = 40;% in px Size of the ROI around particles detected(radius 50 = 100x100 pixel
+delta = 20;% in px Size of the ROI around particles detected(radius 50 = 100x100 pixel
 nParticles = 2;%number of particles expected in the movie has to be exact
-width = 0; %for fitting, input 0 to let the code find the width if unknown)
+width = 1; %for fitting, input 0 to let the code find the width if unknown)
 
 pxSize = 95;%in nm
-minDist = 5; %in pixels (min distant expected between particles)
+minDist = 4; %in pixels (min distant expected between particles)
 scaleBar = 1; %in um
 tail = 20;%Length of the tail in frames, for plotting the traces on top of the movie
 frameRate = 50; %for saving the movie
-makeMovie = false; % true or false, to make a movie with the image and localization
+makeMovie = true; % true or false, to make a movie with the image and localization
 info.type = 'normal';%Transmission or normal 
 info.checkSync = false; %true if want to check for camera synchronization
 info.useSameROI = true;
@@ -20,15 +20,7 @@ toAnalyze = 'folder';%accepted: .mp4, .ome.tif, folder. (folder that contain fol
 outputFolder = 'Results'; %name of the folder to output the results
 %% Loading
 switch toAnalyze %switch depending on what user want to analyze
-    case '.mp4'
-        %load all .mp4 in the selected folder
-        [folder2Mov,path,outDir] = Load.Folder(toAnalyze,outputFolder);
-        mkdir(outDir);
-    case '.ome.tif'
-        %load all .ome.tif in the selected folder
-        [folder2Mov,path,outDir] = Load.Folder(toAnalyze,outputFolder);
-        mkdir(outDir);
-
+  
     case 'folder'
         [path] = uigetdir();%allow user to select folder
         tmp = dir(path);%make it a directory in matlab (list of all thing contained inside)
@@ -38,13 +30,17 @@ switch toAnalyze %switch depending on what user want to analyze
         for i = 1:size(tmp,1)
             path2File = [tmp(i).folder filesep tmp(i).name];%get path to subfolders
             file2Analyze = Core.Movie.getFileInPath(path2File,'.ome.tif');%get .ome.tif in subfolder
-            folder2Mov = [folder2Mov file2Analyze];%store the info to the file if it found one (otherwise file2Analyze is empty)
+            if size(file2Analyze,1)>1
+                file2Analyze = file2Analyze(1);
+            end
+                folder2Mov = [folder2Mov file2Analyze];%store the info to the file if it found one (otherwise file2Analyze is empty)
         end
         %create the out directory
         outDir = [path filesep 'Results']; 
         mkdir(outDir)
     otherwise
-        error('Unknown extension');%throw an error if none of the above possibilities is given
+         [folder2Mov,path,outDir] = Load.Folder(toAnalyze,outputFolder);
+        mkdir(outDir);
 
 end
 %check that folder2Mov is not empty
@@ -56,8 +52,7 @@ allData(size(folder2Mov,2)).locPos = [];
 
 for i =1: size(folder2Mov,2)
     
-    file.path = folder2Mov(i).folder;
-    file.ext  = '.ome.tif';
+    
     switch toAnalyze
         case '.mp4'
             p2file = [folder2Mov(i).folder filesep folder2Mov(i).name];
@@ -70,7 +65,38 @@ for i =1: size(folder2Mov,2)
 
                 fullStackIn(:,:,j) = rgb2gray(frame);%extract the intensity data from frames
             end
+
+        case '.tif'
+            path2file = [folder2Mov(i).folder filesep folder2Mov(i).name];
+            currentPath = folder2Mov(i).folder;
+            file.path = folder2Mov(i).folder;
+            file.ext  = '.tif';
+
+            tObj = Tiff(path2file,'r');
+
+            movieInfo.Width  = tObj.getTag(256);
+            movieInfo.Length = tObj.getTag(257);
+            frames = 1:5000;
+            
+            [ fullStackIn ] = Load.Movie.tif.getframes( path2file, frames );
+            figure
+            imagesc(fullStackIn(:,:,1))
+            rect = drawrectangle(gca);
+            
+            rect = round(rect.Position);
+            fullStackIn = fullStackIn(rect(2):rect(2)+rect(4), rect(1):rect(1)+rect(3),:);
+
+            fullStackIn2 = double(fullStackIn) - mean(fullStackIn,3);
+            figure
+            subplot(1,2,1)
+            imagesc(fullStackIn(:,:,1))
+            subplot(1,2,2)
+            imagesc(imgaussfilt(fullStackIn2(:,:,1)))
+           
+
         otherwise
+            file.path = folder2Mov(i).folder;
+            file.ext  = '.ome.tif';
             if and(i~=1,info.useSameROI)
                info.ROI = prevROI; 
             end
@@ -82,7 +108,7 @@ for i =1: size(folder2Mov,2)
                     currMov.cropIm;
                     prevROI = currMov.info.ROI;
             else
-                prevROI = [1 ,1, currMov.raw.movInfo.Width,currMov.raw.movInfo.Length];
+                %prevROI = [1 ,1, currMov.raw.movInfo.Width,currMov.raw.movInfo.Length];
             end
             %load full stack
             fullStack = currMov.getFrame;
@@ -194,7 +220,7 @@ for i =1: size(folder2Mov,2)
     save(filename,'data2Store');
     
     %store data in allData
-    allData(i).traces = data2Store;
+    allData(i).traces = data2Store*pxSize;
     allData(i).fileName = currentPath;
     allData(i).path = path;
     %clear waitbar
@@ -230,6 +256,6 @@ end
 %% save all Data in the master folder
 trackRes = save.convertData2TrackRes(allData,nParticles);
 
-filename = [path filesep 'trackRes.mat'];
+filename = [file.path filesep 'trackRes.mat'];
 save(filename,'trackRes');
 h = msgbox('Data succesfully saved');

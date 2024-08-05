@@ -5,21 +5,22 @@ close all
 
 %% User input
 
-path2Cal  = 'D:\Documents\Unif\PhD\2019-Data\08 - Aug\test3D Fitting\2DCal';
-file.path = 'D:\Documents\Unif\PhD\2019-Data\09 - Sep\2P';
+path2Cal  = 'E:\Users\Boris\Documents\TmpData - MuEn\data2Boris\2DCal';
+file.path = 'E:\Users\Boris\Documents\TmpData - MuEn\data2Boris\data';
 file.ext  = '.ome.tif';
 
-focusPlane = 4;%=2 af
+focusPlane = 1;%=2 af
 width.xy = 3; %for fitting (3 for 200nm beads, 400 nm beads to be determined, 0 to let the code find the width)
 width.z  = 4;%see above
-nParticles = 2;%number of particles expected in the movie has to be exact
-minDist = 3; %in pixels (min distant expected between particles
+nParticles = 5;%number of particles expected in the movie has to be exact
+minDist = 6; %in pixels (min distant expected between particles
 pxSize = 95;%in nm
-cropRadius = 30; %cut the frame to reduce the amount of data to be fitted
+cropRadius = 40; %cut the frame to reduce the amount of data to be fitted
 info.type = 'normal';%Transmission or normal movie
 info.runMethod = 'load';
-info.calibrate = false;
+info.calibrate = true;
 toAnalyze = '.ome.tif';%accepted: .mp4, .ome.tif, folder. (folder that contain folders of .ome.tif.
+info.checkSync = true;
 outputFolder = 'Results';%name of the folder to output the results
 %% Loading
 %we get the zCalibration directory
@@ -56,7 +57,7 @@ for i = 3:size(folder2Mov,1)
 
 end
 disp('=======> DONE ! <========')
-mov.g1.showFrame(1,5);
+%mov.g1.showFrame(1,5);
 
 %% detection of the center of the beads
 
@@ -102,9 +103,9 @@ for i = 1:length(fields)
     %% Fitting
     nFrames = currMov.raw.movInfo.maxFrame(1);
     %get the X Y dommain
-    x = 1:size(testFrame,2);
-    y = 1:size(testFrame,1);
-    z = 1:size(testFrame,3);
+    x = (1:size(testFrame,2))*pxSize/1000;
+    y = (1:size(testFrame,1))*pxSize/1000;
+    z = currMov.calibrated.oRelZPos;
     [domX,domY,domZ] = meshgrid(x,y,z);
     dom(:,:,:,1) = domX;
     dom(:,:,:,2) = domY;
@@ -118,6 +119,9 @@ for i = 1:length(fields)
     planePos = currMov.calibrated.oRelZPos;
     widths.xy = zeros(1,nFrames);
     widths.z  = zeros(1,nFrames);
+    width.xy = width.xy*pxSize/1000;
+    width.z  = width.z*mean(diff(planePos));
+    
     for j = 1:nFrames
         currentFrame = double(currMov.getFrame(j));
         currentFrame = currentFrame(cropPos(:,1)-cropRadius:cropPos(:,1)+cropRadius,...
@@ -125,10 +129,11 @@ for i = 1:length(fields)
         %inital detection of particles on currentFrame
         [pos] = goldProj.nMaxDetection (currentFrame(:,:,focusPlane),nParticles,minDist);
  
-        x0 = pos(:,2);
-        y0 = pos(:,1);
+        x0 = pos(:,2)*pxSize/1000;
+        y0 = pos(:,1)*pxSize/1000;
+       
         [~,idx] = max(max(max(currentFrame)));
-        z0 = ones(size(x0))*idx;
+        z0 = ones(size(x0))*currMov.calibrated.oRelZPos(focusPlane);
         
         %Multiple gaussian fitting occurs here
         [gPar,resnorm,res] = Localization.Gauss.MultipleGFit3D(currentFrame,x0,y0,z0,dom,nParticles,width); 
@@ -143,16 +148,16 @@ for i = 1:length(fields)
         %Get Z position
         for k = 1:nPart
             
-            domain = 1:size(currentFrame,3);
+            %domain = 1:size(currentFrame,3);
 
-            if or(z(k)<min(domain),z(k)>max(domain))
-                z(k)   = NaN;                           
-            else
-                tmpZ = floor(z(k));
-                fracZ = z(k)-tmpZ;
-                z(k) = planePos(tmpZ)+fracZ*(planePos(tmpZ+1) - planePos(tmpZ));
-                z(k) = z(k)*1000;
-            end
+%             if or(z(k)<0,z(k)>max(domain))
+%                 z(k)   = NaN;                           
+%             else
+%                 tmpZ = floor(z(k));
+%                 fracZ = z(k)-tmpZ;
+%                 z(k) = planePos(tmpZ)+fracZ*(planePos(tmpZ+1) - planePos(tmpZ));
+%                 z(k) = z(k)*1000;
+%             end
             
         end
         
@@ -163,7 +168,7 @@ for i = 1:length(fields)
             gPos = reshape(gPar(5:end),[3,nParticles]);
             gPos = gPos(:,newOrder);
             prevPos = reshape(gPos,[1,nParticles*3]);
-            gPos = reshape(gPos,[1,3,nParticles])*pxSize;
+            gPos = reshape(gPos,[1,3,nParticles]);
             gPos(:,3,:) = z;
             %store data
             data2Store(j,:,:) = gPos;
@@ -192,7 +197,7 @@ for i = 1:length(fields)
     filename = [currentPath filesep 'LocalizationData.mat'];
     save(filename,'data2Store');
     %store data in allData
-    allData(i).traces = data2Store;
+    allData(i).traces = data2Store*pxSize;
     allData(i).fileName = currentPath;  
   
 
@@ -202,7 +207,7 @@ end
 figure
 hold on
 for i = 1: size(data2Store,3)
-    plot3(data2Store(:,1,i),data2Store(:,2,i),data2Store(:,3,i));
+    plot3(data2Store(:,1,i)/pxSize,data2Store(:,2,i)/pxSize,data2Store(:,3,i));
     
 end
 axis image

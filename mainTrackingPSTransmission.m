@@ -82,7 +82,11 @@ for i =1: size(folder2Mov,2)
                     currMov.cropIm;
                     prevROI = currMov.info.ROI;
             else
-                prevROI = [1 ,1, currMov.raw.movInfo.Width,currMov.raw.movInfo.Length];
+                if isfield(currMov.info,'ROI')
+                    prevROI = currMov.info.ROI;
+                else
+                    prevROI = [1 ,1, currMov.raw.movInfo.Width,currMov.raw.movInfo.Length];
+                end
             end
             %load full stack
             fullStack = currMov.getFrame;
@@ -104,7 +108,9 @@ for i =1: size(folder2Mov,2)
     BW = imbinarize(scNorm);
     
     BW = imfill(BW,'holes');
-    
+    SE = strel('disk',3,8);
+    BW = imerode(BW,SE);
+
     stat = regionprops(BW,'area','pixelidxlist');
     
     [~,idx] = max([stat.Area]);
@@ -136,7 +142,7 @@ for i =1: size(folder2Mov,2)
     %calculate center of mass of particles position for cropping later
     cropPos = round(mean(pos,1));
     %plot to check that the max detection worked
-    figure
+    figure(1)
     imagesc(fullStackIn(:,:,frame))
     hold on
     plot(pos(:,2),pos(:,1),'r+')
@@ -223,7 +229,7 @@ for i =1: size(folder2Mov,2)
     save(filename,'data2Store');
     
     %store data in allData
-    allData(i).traces = data2Store;
+    allData(i).traces = data2Store*pxSize;
     allData(i).fileName = currentPath;
     allData(i).path = path;
     %clear waitbar

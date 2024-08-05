@@ -3,7 +3,7 @@ function trackRes = convertData2TrackRes(allData,nParticles)
   %store only the path in main like in trackRes
   %then have all traces in one together with their respective filenames
   trackRes = struct();
-  trackRes.path = allData(1).path;
+  trackRes.path = allData(1).fileName;
   traces = cell(nParticles*size(allData,2),2);
     for i =1: size(allData,2)
         nFrames = length(allData(i).traces);

@@ -202,7 +202,7 @@ for i = 1:length(fields)
     filename = [currentPath filesep 'LocalizationData.mat'];
     save(filename,'data2Store');
     %store data in allData
-    allData(i).traces = data2Store;
+    allData(i).traces = data2Store*pxSize;
     allData(i).fileName = currentPath;  
     %store fittings
     fitMov(:,:,j) = F;

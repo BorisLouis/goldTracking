@@ -257,7 +257,7 @@ classdef Movie < handle
                 if isfield(obj.info,'ROI')
 
                     ROI = round(obj.info.ROI);
-                    data.Cam1 = movC1(ROI(2):ROI(2)+ROI(4),ROI(1):ROI(1)+ROI(3),:);
+                    data.Cam1 = movC1(ROI(2):ROI(2)+ROI(4)-1,ROI(1):ROI(1)+ROI(3)-1,:);
 
                 else
 
