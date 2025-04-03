@@ -3,8 +3,8 @@ clc
 close all
 %% User input
 delta = 20;% in px Size of the ROI around particles detected(radius 50 = 100x100 pixel
-nParticles = 2;%number of particles expected in the movie has to be exact
-width = 1; %for fitting, input 0 to let the code find the width if unknown)
+nParticles =9;%number of particles expected in the movie has to be exact
+width = 3; %for fitting, input 0 to let the code find the width if unknown)
 
 pxSize = 95;%in nm
 minDist = 4; %in pixels (min distant expected between particles)
@@ -120,11 +120,12 @@ for i =1: size(folder2Mov,2)
                 fullStackIn = fullStack.Cam1;
             end
     end
-    
     frame = 5;
+    [pos ] =  goldProj.locGLRT(fullStackIn(:,:,frame),nParticles);
+    
     %get the n maxima where n is the number of particles expected and
     %minDist is the distance expected between them
-    [pos] = goldProj.nMaxDetection (fullStackIn(:,:,frame),nParticles,minDist);
+%     [pos] = goldProj.nMaxDetection (fullStackIn(:,:,frame),nParticles,minDist);
     
     x0 = pos(:,2);
     y0 = pos(:,1);
@@ -159,7 +160,8 @@ for i =1: size(folder2Mov,2)
     for j = 1:nFrames
         currentFrame = double(fullStackIn(:,:,j));
         %inital detection of particles on currentFrame
-        [pos] = goldProj.nMaxDetection (currentFrame,nParticles,minDist);
+        [pos ] =  goldProj.locGLRT(fullStackIn(:,:,frame),nParticles);
+       % [pos] = goldProj.nMaxDetection (currentFrame,nParticles,minDist);
 %         
 %         figure(1)
 %         imagesc(currentFrame)
@@ -257,5 +259,5 @@ end
 trackRes = save.convertData2TrackRes(allData,nParticles);
 
 filename = [file.path filesep 'trackRes.mat'];
-save(filename,'trackRes');
+save(filename,'trackRes','-v7.3');
 h = msgbox('Data succesfully saved');

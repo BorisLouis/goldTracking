@@ -1,6 +1,6 @@
 %Fitting
 function [gpar,resnorm,res] = MultipleFitting(A,X0,Y0,domain,NbG,width)
-maxNFit = 8;
+maxNFit = 9;
 if NbG > maxNFit
     error('too many PSF are asked, maximum is 8 for fitting')
 end
@@ -50,7 +50,8 @@ initguess = [max(A(:))-min(A(:))     wguess      wguess          Bkg0  ...
             X0(1)          Y0(1)    X0(2)      Y0(2) ...
             X0(3)          Y0(3)    X0(4)      Y0(4) ...
             X0(5)          Y0(5)    X0(6)      Y0(6) ...
-            X0(7)          Y0(7)    X0(8)      Y0(8)];
+            X0(7)          Y0(7)    X0(8)      Y0(8) ...
+            X0(9)          Y0(9)];
         
 initguess = initguess(1,1:4+(NbG)*2);
 
@@ -90,8 +91,14 @@ switch NbG
     case 8
          [gpar,resnorm,res] = lsqcurvefit(@Gauss2D8,initguess,...
             domain,A,lb,ub,curvefitoptions);
+        
+    case 9
+         [gpar,resnorm,res] = lsqcurvefit(@Gauss2D9,initguess,...
+            domain,A,lb,ub,curvefitoptions);
+        
     otherwise
         error('The current version of the program cannot fit more than 8 2D gaussian at a time ');
+
 end
 
 end

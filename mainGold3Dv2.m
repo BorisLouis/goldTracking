@@ -6,7 +6,7 @@ close all
 %% User input
 
 path2Cal  = 'E:\Users\Boris\Documents\TmpData - MuEn\data2Boris\2DCal';
-file.path = 'E:\Users\Boris\Documents\TmpData - MuEn\data2Boris\data';
+file.path = 'E:\Users\Boris\Documents\TmpData - MuEn\data2Boris\ensembled data\data\mov1';
 file.ext  = '.ome.tif';
 
 focusPlane = 1;%=2 af
