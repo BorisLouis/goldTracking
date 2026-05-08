@@ -1,12 +1,13 @@
-clear 
+
+clear
 clc
 close all
 %% User input
 delta = 20;% in px Size of the ROI around particles detected(radius 50 = 100x100 pixel
-nParticles =9;%number of particles expected in the movie has to be exact
+nParticles = 2;%number of particles expected in the movie has to be exact
 width = 3; %for fitting, input 0 to let the code find the width if unknown)
 
-pxSize = 95;%in nm
+pxSize = 112;%in nm %112 for supercontinuum %95 for multiplane (60x obj)
 minDist = 4; %in pixels (min distant expected between particles)
 scaleBar = 1; %in um
 tail = 20;%Length of the tail in frames, for plotting the traces on top of the movie
@@ -16,8 +17,11 @@ info.type = 'normal';%Transmission or normal
 info.checkSync = false; %true if want to check for camera synchronization
 info.useSameROI = true;
 info.runMethod = 'load';% 'run'
-toAnalyze = 'folder';%accepted: .mp4, .ome.tif, folder. (folder that contain folders of .ome.tif.
+toAnalyze = 'folder';%accepted: .tif, .mp4, .ome.tif, folder. (folder that contain folders of .ome.tif.
 outputFolder = 'Results'; %name of the folder to output the results
+
+detection ="GLRT"; %"NMax"
+
 %% Loading
 switch toAnalyze %switch depending on what user want to analyze
   
@@ -104,7 +108,7 @@ for i =1: size(folder2Mov,2)
             fullStack = currMov.getFrame(1);%extract first frame
             frame = fullStack.Cam1;
             %check if cropping is necessary
-            if size(frame,2) > 400
+            if size(frame,2) > 200
                     currMov.cropIm;
                     prevROI = currMov.info.ROI;
             else
@@ -121,12 +125,17 @@ for i =1: size(folder2Mov,2)
             end
     end
     frame = 5;
-    [pos ] =  goldProj.locGLRT(fullStackIn(:,:,frame),nParticles);
+    switch detection
+        case "GLRT"
+            [pos ] =  goldProj.locGLRT(fullStackIn(:,:,frame),nParticles);
     
     %get the n maxima where n is the number of particles expected and
     %minDist is the distance expected between them
-%     [pos] = goldProj.nMaxDetection (fullStackIn(:,:,frame),nParticles,minDist);
-    
+        case "NMax"
+           [pos] = goldProj.nMaxDetection (fullStackIn(:,:,frame),nParticles,minDist);
+        otherwise
+            error("Unknown analysis method");
+    end
     x0 = pos(:,2);
     y0 = pos(:,1);
 
@@ -160,8 +169,17 @@ for i =1: size(folder2Mov,2)
     for j = 1:nFrames
         currentFrame = double(fullStackIn(:,:,j));
         %inital detection of particles on currentFrame
-        [pos ] =  goldProj.locGLRT(fullStackIn(:,:,frame),nParticles);
-       % [pos] = goldProj.nMaxDetection (currentFrame,nParticles,minDist);
+        switch detection
+            case "GLRT"
+                [pos ] =  goldProj.locGLRT(fullStackIn(:,:,frame),nParticles);
+        
+        %get the n maxima where n is the number of particles expected and
+        %minDist is the distance expected between them
+            case "NMax"
+               [pos] = goldProj.nMaxDetection (fullStackIn(:,:,frame),nParticles,minDist);
+            otherwise
+                error("Unknown analysis method");
+        end
 %         
 %         figure(1)
 %         imagesc(currentFrame)
@@ -225,6 +243,24 @@ for i =1: size(folder2Mov,2)
     allData(i).traces = data2Store*pxSize;
     allData(i).fileName = currentPath;
     allData(i).path = path;
+    % export localization data to TXT (nm units)
+    % export localization data to TXT (columns: Frame, X1, Y1, X2, Y2, ...)
+    nFrames = size(allData(i).traces, 1);
+
+    nParticles = size(allData(i).traces, 3);
+
+    % preallocate output matrix
+    txtData = zeros(nFrames, 1 + 2*nParticles);
+    txtData(:,1) = (1:nFrames)';  % Frame index
+
+    for p = 1:nParticles
+    txtData(:, 2*p)   = allData(i).traces(:,1,p); % X
+    txtData(:, 2*p+1) = allData(i).traces(:,2,p); % Y
+    end
+
+    % write to txt file
+    txtFilename = [file.path filesep 'LocalizationData_columns_nm.txt'];
+    writematrix(txtData, txtFilename, 'Delimiter', '\t');
     %clear waitbar
     close(h);
     
@@ -247,6 +283,7 @@ for i =1: size(folder2Mov,2)
     %save the figure in the current folder path
     filename = [file.path filesep 'LocalizationDensity.fig'];
     saveas(Fig,filename);
+   
     
 %% MovieMaker
 %save a movie where the traces is displayed on top of the image
@@ -258,6 +295,6 @@ end
 %% save all Data in the master folder
 trackRes = save.convertData2TrackRes(allData,nParticles);
 
-filename = [file.path filesep 'trackRes.mat'];
+filename = [outDir filesep 'trackRes.mat'];
 save(filename,'trackRes','-v7.3');
 h = msgbox('Data succesfully saved');
