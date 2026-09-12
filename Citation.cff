@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Boris"
+  given-names: "Louis"
+  orcid: "https://orcid.org/my-orcid?orcid=0000-0003-2882-6907"
+
+title: "goldTracking"
+version: 1.0.0
+doi: 10.5281/zenodo.1234
+date-released: 2026-09-12
+url: "https://github.com/BorisLouis/goldTracking"
+
+references:
+  - type: article
+    title: >-
+      The primeval optical evolving matter by optical binding
+      inside and outside the photon beam
+    authors:
+      - family-names: "Huang"
+        given-names: "Chih-Hao"
+      - family-names: "Louis"
+        given-names: "Boris"
+      - family-names: "Bresolí-Obach"
+        given-names: "Roger"
+      - family-names: "Kudo"
+        given-names: "Tetsuhiro"
+      - family-names: "Camacho"
+        given-names: "Rafael"
+      - family-names: "Scheblykin"
+        given-names: "Ivan G."
+      - family-names: "Sugiyama"
+        given-names: "Teruki"
+      - family-names: "Hofkens"
+        given-names: "Johan"
+      - family-names: "Masuhara"
+        given-names: "Hiroshi"
+    journal: "Nature Communications"
+    volume: "13"
+    article-number: "5325"
+    year: 2022
+    month: 9
+    doi: "10.1038/s41467-022-33070-w"  
