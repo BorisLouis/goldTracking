@@ -7,7 +7,7 @@ authors:
 
 title: "goldTracking"
 version: 1.0.0
-doi: 10.5281/zenodo.1234
+doi: https://doi.org/10.5281/zenodo.22727651
 date-released: 2026-09-12
 url: "https://github.com/BorisLouis/goldTracking"
 
