@@ -4,7 +4,7 @@ clc
 close all
 %% User input
 delta = 20;% in px Size of the ROI around particles detected(radius 50 = 100x100 pixel
-nParticles = 2;%number of particles expected in the movie has to be exact
+nParticles =6;%number of particles expected in the movie has to be exact
 width = 3; %for fitting, input 0 to let the code find the width if unknown)
 
 pxSize = 112;%in nm %112 for supercontinuum %95 for multiplane (60x obj)
@@ -12,7 +12,7 @@ minDist = 4; %in pixels (min distant expected between particles)
 scaleBar = 1; %in um
 tail = 20;%Length of the tail in frames, for plotting the traces on top of the movie
 frameRate = 50; %for saving the movie
-makeMovie = true; % true or false, to make a movie with the image and localization
+makeMovie = false; % true or false, to make a movie with the image and localization
 info.type = 'normal';%Transmission or normal 
 info.checkSync = false; %true if want to check for camera synchronization
 info.useSameROI = true;
@@ -21,7 +21,7 @@ toAnalyze = 'folder';%accepted: .tif, .mp4, .ome.tif, folder. (folder that conta
 outputFolder = 'Results'; %name of the folder to output the results
 
 detection ="GLRT"; %"NMax"
-
+expT = NaN; frameDt = NaN;  fps = NaN;
 %% Loading
 switch toAnalyze %switch depending on what user want to analyze
   
@@ -105,6 +105,15 @@ for i =1: size(folder2Mov,2)
                info.ROI = prevROI; 
             end
             currMov = Core.Movie(file,info);%Create Movie Object
+            %extract frame rate and exposure time
+            fInfo   = currMov.raw.frameInfo;
+            cam1    = strcmp({fInfo.C}, num2str(currMov.raw.movInfo.Cam(1)));  % one camera only
+            t       = [fInfo(cam1).time];                                       % ms, relative to frame 1
+            expT    = str2double(string(currMov.raw.movInfo.expT));             % = frameInfo(1).expT
+            frameDt = (max(t) - min(t)) / (numel(t) - 1);                       % mean time between frames
+            fps = 1000/frameDt;    
+
+
             fullStack = currMov.getFrame(1);%extract first frame
             frame = fullStack.Cam1;
             %check if cropping is necessary
@@ -112,7 +121,7 @@ for i =1: size(folder2Mov,2)
                     currMov.cropIm;
                     prevROI = currMov.info.ROI;
             else
-                %prevROI = [1 ,1, currMov.raw.movInfo.Width,currMov.raw.movInfo.Length];
+                prevROI = [1 ,1, currMov.raw.movInfo.Width,currMov.raw.movInfo.Length];
             end
             %load full stack
             fullStack = currMov.getFrame;
@@ -237,12 +246,17 @@ for i =1: size(folder2Mov,2)
     end
     %save data to the current folder being analyze
     filename = [file.path filesep 'LocalizationData.mat'];
-    save(filename,'data2Store');
+    save(filename,'data2Store','expT','frameDt','fps');
     
     %store data in allData
     allData(i).traces = data2Store*pxSize;
     allData(i).fileName = currentPath;
     allData(i).path = path;
+    allData(i).expT    = expT;
+    allData(i).frameDt = frameDt;      % ms
+    allData(i).fps     = 1000/frameDt;
+
+
     % export localization data to TXT (nm units)
     % export localization data to TXT (columns: Frame, X1, Y1, X2, Y2, ...)
     nFrames = size(allData(i).traces, 1);

@@ -28,6 +28,9 @@ function trackRes = convertData2TrackRes(allData,nParticles)
         
         
     end
+    trackRes.expT    = [allData.expT];      % exposure time per movie
+    trackRes.frameDt = [allData.frameDt];   % mean time between frames per movie (ms)
+    trackRes.fps     = [allData.fps];       % frames per second per movie
     trackRes.traces = traces;
 
 
